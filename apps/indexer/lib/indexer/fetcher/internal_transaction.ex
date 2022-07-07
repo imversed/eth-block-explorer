@@ -132,7 +132,7 @@ defmodule Indexer.Fetcher.InternalTransaction do
         )
 
         # re-queue the de-duped entries
-        {:retry, filtered_unique_numbers}
+#        {:retry, filtered_unique_numbers}
 
       :ignore ->
         :ok
