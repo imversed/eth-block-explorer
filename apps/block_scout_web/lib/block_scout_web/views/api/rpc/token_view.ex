@@ -16,6 +16,31 @@ defmodule BlockScoutWeb.API.RPC.TokenView do
     RPCView.render("error.json", assigns)
   end
 
+  def render("metadata.json", %{metadata: metadata}) do
+    %{
+      "status" => "1",
+      "message" => "OK",
+      "result" => metadata
+    }
+  end
+
+  def render("tokens.json", %{tokens: tokens}) do
+    %{
+      "status" => "1",
+      "message" => "OK",
+      "result" => tokens
+    }
+  end
+
+
+  def render("token.json", %{tokens: token}) do
+    %{
+      "status" => "1",
+      "message" => "OK",
+      "result" => token
+    }
+  end
+
   defp prepare_token(token) do
     %{
       "type" => token.type,

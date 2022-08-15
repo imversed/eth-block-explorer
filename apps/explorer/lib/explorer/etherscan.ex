@@ -310,8 +310,8 @@ defmodule Explorer.Etherscan do
   Gets a list of tokens owned by the given address hash.
 
   """
-  @spec list_tokens(Hash.Address.t()) :: map() | []
-  def list_tokens(%Hash{byte_count: unquote(Hash.Address.byte_count())} = address_hash) do
+  @spec list_tokens(Hash.Address.t(), integer) :: map() | []
+  def list_tokens(%Hash{byte_count: unquote(Hash.Address.byte_count())} = address_hash, token_type) do
     query =
       from(
         ctb in CurrentTokenBalance,
@@ -328,6 +328,13 @@ defmodule Explorer.Etherscan do
           id: ctb.token_id
         }
       )
+    query = case token_type do
+      "nft" -> from [cbt, t]  in query,
+                    where:  t.type == "ERC-721" or t.type == "ERC-1155"
+      "erc20" -> from [cbt, t] in query,
+                      where:  t.type == "ERC-20"
+      _other -> query
+    end
 
     Repo.replica().all(query)
   end

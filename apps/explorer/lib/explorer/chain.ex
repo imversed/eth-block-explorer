@@ -4703,6 +4703,83 @@ defmodule Explorer.Chain do
     end
   end
 
+  @spec metadata_from_hash(Hash.t()) :: []
+  def metadata_from_hash(%Hash{byte_count: unquote(Hash.Address.byte_count())} = hash) do
+    query = (from i in Instance,
+          where: i.token_contract_address_hash == ^hash,
+          select: i.metadata)
+
+    query
+    |> Repo.all()
+  end
+
+  @spec get_tokens_from_hash(Hash.t()) :: []
+  def get_tokens_from_hash(%Hash{byte_count: unquote(Hash.Address.byte_count())} = hash) do
+    query = (from t in Token,
+                  where: t.contract_address_hash == ^hash
+      )
+
+    query
+    |> Repo.all()
+  end
+
+  def get_token_by_token_hash_and_token_id(%Hash{byte_count: unquote(Hash.Address.byte_count())} = hash, token_id) do
+    query = (from ti in Instance,
+      join: t in Token, as: :token, on: ti.contract_address_hash == t.token_contract_hash,
+      where: ti.contract_address_hash == ^hash
+      and ti.token_id == ^token_id
+      )
+      query
+      |> Repo.all()
+  end
+
+  def get_tokens_by_address(%Hash{byte_count: unquote(Hash.Address.byte_count())} = hash, token_type) do
+    query =
+      from(
+        t in Token,
+        join: ta in TokenAddress,
+        on: t.contract_address_hash == ta.hash,
+        where: ta.hash == ^hash,
+        select: t.*,
+        limit: 10000
+      )
+
+
+    query = case token_type do
+      "nft" -> from [t, ta]  in query,
+                    where:  t.type == "ERC-721" or t.type == "ERC-1155"
+      "erc20" -> from [t, ta] in query,
+                      where:  t.type == "ERC-20"
+      _other -> query
+    end
+  end
+
+  def get_token_transfers(%Hash{byte_count: unquote(Hash.Address.byte_count())} = hash, token_type) do
+    query =
+      from(
+        token_transfer in TokenTransfer,
+        join: t in Token,
+        on: t.contract_address_hash == token_transfer.token_contract_address_hash,
+        join: ta in TokenAddress,
+        on: t.contract_address_hash == ta.hash,
+        where: not is_nil(token_transfer.token_id) and ta.hash == ^hash,
+        select: token_transfer.*,
+        limit: 10000
+      )
+
+
+    query = case token_type do
+        "nft" -> from [token_transfer, t, ta]  in query,
+                       where:  t.type == "ERC-721" or t.type == "ERC-1155"
+        "erc20" -> from [token_transfer, t, ta] in query,
+                         where:  t.type == "ERC-20"
+        _other -> query
+    end
+
+    query
+    |> Repo.all()
+  end
+
   @spec fetch_token_transfers_from_token_hash(Hash.t(), [paging_options]) :: []
   def fetch_token_transfers_from_token_hash(token_address_hash, options \\ []) do
     TokenTransfer.fetch_token_transfers_from_token_hash(token_address_hash, options)

@@ -2,6 +2,7 @@ defmodule BlockScoutWeb.API.RPC.TokenController do
   use BlockScoutWeb, :controller
 
   alias BlockScoutWeb.API.RPC.Helpers
+  alias Explorer.Token.InstanceMetadataRetriever
   alias Explorer.{Chain, PagingOptions}
 
   def gettoken(conn, params) do
@@ -56,5 +57,58 @@ defmodule BlockScoutWeb.API.RPC.TokenController do
 
   defp to_address_hash(address_hash_string) do
     {:format, Chain.string_to_address_hash(address_hash_string)}
+  end
+
+  defp fetch_address(params) do
+    {:address_hash, Map.fetch(params, "address")}
+  end
+
+  defp fetch_token_id(params) do
+    {:token_id, Map.fetch(params, "token_id")}
+  end
+
+  def metadata(conn, params) do
+    with {:address_hash, {:ok, address_hash}} <- fetch_address(params),
+         {:format, {:ok, address_hash}} <- to_address_hash(address_hash),
+         {:metadata, metadata} <- {:metadata, Chain.metadata_from_hash(address_hash)} do
+      render(conn, "metadata.json", %{metadata: metadata})
+    else
+      {:address_hash, :error} ->
+        render(conn, :error, error: "Query parameter contract address is required")
+
+      {:format, :error} ->
+        render(conn, :error, error: "Invalid contract address hash")
+
+    end
+  end
+
+  def tokenlist(conn, params) do
+    with {:address_hash, {:ok, address_hash}} <- fetch_address(params),
+         {:format, {:ok, address_hash}} <- to_address_hash(address_hash),
+         {:tokens, tokens} <- {:tokens, Chain.get_tokens_from_hash(address_hash)} do
+      render(conn, "tokens.json", %{tokens: tokens})
+    else
+      {:address_hash, :error} ->
+        render(conn, :error, error: "Query parameter contract address is required")
+
+      {:format, :error} ->
+        render(conn, :error, error: "Invalid contract address hash")
+
+    end
+  end
+
+  def token(conn, params) do
+    with {:address_hash, {:ok, address_hash}} <- fetch_address(params),
+         {:token_id, {:ok, token_id}} <- fetch_token_id(params),
+         {:format, {:ok, address_hash}} <- to_address_hash(address_hash),
+         {:tokens, tokens} <- {:tokens, Chain.get_token_by_token_hash_and_token_id(address_hash, token_id)} do
+      render(conn, "tokens.json", %{tokens: tokens})
+    else
+      {:address_hash, :error} ->
+        render(conn, :error, error: "Query parameter contract address is required")
+
+      {:format, :error} ->
+        render(conn, :error, error: "Invalid contract address hash")
+    end
   end
 end
