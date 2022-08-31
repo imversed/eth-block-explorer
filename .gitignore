@@ -8,7 +8,7 @@
 /doc
 /*.ez
 /logs
-
+.export
 # Generated on crash by the VM
 erl_crash.dump
 
