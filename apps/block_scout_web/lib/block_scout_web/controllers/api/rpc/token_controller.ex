@@ -4,6 +4,8 @@ defmodule BlockScoutWeb.API.RPC.TokenController do
   alias BlockScoutWeb.API.RPC.Helpers
   alias Explorer.{Chain, PagingOptions}
 
+  @rpc_paging_options %PagingOptions{page_size: 10_000}
+
   def gettoken(conn, params) do
     with {:contractaddress_param, {:ok, contractaddress_param}} <- fetch_contractaddress(params),
          {:format, {:ok, address_hash}} <- to_address_hash(contractaddress_param),
@@ -18,6 +20,22 @@ defmodule BlockScoutWeb.API.RPC.TokenController do
 
       {:token, {:error, :not_found}} ->
         render(conn, :error, error: "contract address not found")
+    end
+  end
+
+  def tokenlist(conn, params) do
+
+    with {:contractaddress_param, {:ok, contractaddress_param}} <- fetch_contractaddress(params),
+         {:format, {:ok, address_hash}} <- to_address_hash(contractaddress_param),
+         {:token_transfers, token_transfers} <- {:token_transfers, Chain.address_to_unique_tokens(address_hash, paging_options: @rpc_paging_options)} do
+      render(conn, "tokenlist.json", %{token_transfers: token_transfers})
+    else
+      {:contractaddress_param, :error} ->
+        render(conn, :error, error: "Query parameter contract address is required")
+
+      {:format, :error} ->
+        render(conn, :error, error: "Invalid contract address hash")
+
     end
   end
 
