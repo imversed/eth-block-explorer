@@ -85,6 +85,79 @@ defmodule BlockScoutWeb.API.RPC.TokenControllerTest do
     end
   end
 
+  describe "tokenList" do
+    test "returns a list of tokens", %{conn: conn} do
+      token_contract_address = insert(:contract_address)
+      token = insert(:token, contract_address: token_contract_address, type: "ERC-721")
+
+      insert(
+        :token_instance,
+        token_contract_address_hash: token_contract_address.hash,
+        token_id: 11
+      )
+
+      insert(
+        :token_instance,
+        token_contract_address_hash: token_contract_address.hash,
+        token_id: 29
+      )
+
+      transaction =
+        :transaction
+        |> insert()
+        |> with_block(insert(:block, number: 1))
+
+      tt1 =
+        insert(
+          :token_transfer,
+          block_number: 1000,
+          to_address: build(:address),
+          transaction: transaction,
+          token_contract_address: token_contract_address,
+          token: token,
+          token_id: 29
+        )
+
+        tt2 = insert(
+          :token_transfer,
+          block_number: 999,
+          to_address: build(:address),
+          transaction: transaction,
+          token_contract_address: token_contract_address,
+          token: token,
+          token_id: 11
+        )
+
+
+      params = %{
+        "module" => "token",
+        "action" => "tokenList",
+        "contractaddress" => to_string(token_contract_address.hash)
+      }
+
+      expected_result = [
+        %{
+          "contractAddress" => to_string(token_contract_address.hash),
+          "ownerAddress" => to_string(tt1.to_address.hash),
+          "tokenId" => to_string(tt1.token_id)
+        },
+        %{
+          "contractAddress" => to_string(token_contract_address.hash),
+          "ownerAddress" => to_string(tt2.to_address.hash),
+          "tokenId" => to_string(tt2.token_id)
+        }
+      ]
+      assert response =
+        conn
+        |> get("/api", params)
+        |> json_response(200)
+
+        assert response["result"] == expected_result
+        assert response["status"] == "1"
+        assert response["message"] == "OK"
+    end
+  end
+
   # defp gettoken_schema do
   #   ExJsonSchema.Schema.resolve(%{
   #     "type" => "object",
