@@ -276,6 +276,29 @@ defmodule BlockScoutWeb.Etherscan do
     "result" => nil
   }
 
+  @token_tokenlist_example_value %{
+    "status" => "1",
+    "message" => "OK",
+    "result" => [
+      %{
+        "contractAddress" => "0x0000000000000000000000000000000000000000",
+        "ownerAddress" => "0x0000000000000000000000000000000000000001",
+        "tokenId" => "1"
+        },
+        %{
+          "contractAddress" => "0x0000000000000000000000000000000000000000",
+          "ownerAddress" => "0x0000000000000000000000000000000000000002",
+          "tokenId" => "2"
+          }
+      ]
+  }
+
+  @token_tokenlist_example_value_error %{
+    "status" => "0",
+    "message" => "Invalid contract address format",
+    "result" => nil
+  }
+
   @token_gettokenholders_example_value %{
     "status" => "1",
     "message" => "OK",
@@ -1939,6 +1962,45 @@ defmodule BlockScoutWeb.Etherscan do
     ]
   }
 
+  @token_tokenlist_action %{
+    name: "tokenList",
+    description:
+    "Get a list of <a href='https://github.com/ethereum/EIPs/issues/20'>ERC-20</a> " <>
+        "or <a href='https://github.com/ethereum/EIPs/issues/721'>ERC-721</a> tokens by contract address.",
+    required_params: [
+      %{
+        key: "contractaddress",
+        placeholder: "contractAddressHash",
+        type: "string",
+        description: "A 160-bit code used for identifying contracts."
+      }
+    ],
+    optional_params: [],
+    responses: [
+      %{
+        code: "200",
+        description: "successful operation",
+        example_value: Jason.encode!(@token_tokenlist_example_value),
+        model: %{
+          name: "Result",
+          fields: %{
+            status: @status_type,
+            message: @message_type,
+            result: %{
+              type: "model",
+              model: @token_model
+            }
+          }
+        }
+      },
+      %{
+        code: "200",
+        description: "error",
+        example_value: Jason.encode!(@token_tokenlist_example_value_error)
+      }
+    ]
+  }
+
   @token_gettokenholders_action %{
     name: "getTokenHolders",
     description: "Get token holders by contract address.",
@@ -2919,6 +2981,7 @@ defmodule BlockScoutWeb.Etherscan do
     name: "token",
     actions: [
       @token_gettoken_action,
+      @token_tokenlist_action,
       @token_gettokenholders_action
     ]
   }
