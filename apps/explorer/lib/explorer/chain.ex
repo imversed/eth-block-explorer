@@ -5119,6 +5119,21 @@ defmodule Explorer.Chain do
     |> Repo.all()
   end
 
+  @spec address_to_token_instance(Hash.Address.t(), integer()) :: [Instance.t()]
+  def address_to_token_instance(contract_address_hash, token_id) do
+    query =
+      from(ti in Instance,
+      where: ti.token_contract_address_hash == ^contract_address_hash,
+      where: ti.token_id == ^token_id
+      )
+    case query |> Repo.one() do
+      nil ->
+        {:error, :not_found}
+      token_instance ->
+        {:ok, token_instance}
+    end
+  end
+
   @spec data() :: Dataloader.Ecto.t()
   def data, do: DataloaderEcto.new(Repo)
 

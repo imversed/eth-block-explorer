@@ -24,7 +24,6 @@ defmodule BlockScoutWeb.API.RPC.TokenController do
   end
 
   def tokenlist(conn, params) do
-
     with {:contractaddress_param, {:ok, contractaddress_param}} <- fetch_contractaddress(params),
          {:format, {:ok, address_hash}} <- to_address_hash(contractaddress_param),
          {:token_transfers, token_transfers} <- {:token_transfers, Chain.address_to_unique_tokens(address_hash, paging_options: @rpc_paging_options)} do
@@ -36,6 +35,31 @@ defmodule BlockScoutWeb.API.RPC.TokenController do
       {:format, :error} ->
         render(conn, :error, error: "Invalid contract address hash")
 
+    end
+  end
+
+  def token(conn, params) do
+    with {:contractaddress_param, {:ok, contractaddress_param}} <- fetch_contractaddress(params),
+         {:tokenid_param, {:ok, tokenid_param}} <- fetch_tokenid(params),
+         {:ok, token_id} <- to_token_id(tokenid_param),
+         {:format, {:ok, address_hash}} <- to_address_hash(contractaddress_param),
+         {:token_instance, {:ok, token_instance}} <- {:token_instance, Chain.address_to_token_instance(address_hash, token_id)} do
+      render(conn, "token_details.json", %{token_instance: token_instance})
+    else
+      {:contractaddress_param, :error} ->
+        render(conn, :error, error: "Query parameter contract address is required")
+
+      {:format, :error} ->
+        render(conn, :error, error: "Invalid contract address hash")
+
+      {:tokenid_param, :error} ->
+        render(conn, :error, error: "Query parameter token id is required")
+
+      {:error, :invalid_token_id} ->
+        render(conn, :error, error: "Token id format is invalid (not an integer)")
+
+      {:token_instance, {:error, :not_found}} ->
+        render(conn, :error, error: "Token not found")
     end
   end
 
@@ -74,5 +98,20 @@ defmodule BlockScoutWeb.API.RPC.TokenController do
 
   defp to_address_hash(address_hash_string) do
     {:format, Chain.string_to_address_hash(address_hash_string)}
+  end
+
+  defp fetch_tokenid(params) do
+    {:tokenid_param, Map.fetch(params, "tokenId")}
+  end
+
+  defp to_token_id(token_id_string) do
+    case Integer.parse(token_id_string) do
+      {token_id, ""} ->
+        {:ok, token_id}
+      {_token_id, _remainder} ->
+        {:error, :invalid_token_id}
+      :error ->
+        {:error, :invalid_token_id}
+    end
   end
 end
