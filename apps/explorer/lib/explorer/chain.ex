@@ -5119,18 +5119,19 @@ defmodule Explorer.Chain do
     |> Repo.all()
   end
 
-  @spec address_to_token_instance(Hash.Address.t(), integer()) :: [Instance.t()]
-  def address_to_token_instance(contract_address_hash, token_id) do
+  @spec token_by_address_and_id(Hash.Address.t(), integer()) :: {:ok, [TokenTransfer.t()]}
+  def token_by_address_and_id(contract_address_hash, token_id) do
     query =
-      from(ti in Instance,
-      where: ti.token_contract_address_hash == ^contract_address_hash,
-      where: ti.token_id == ^token_id
+      from(
+        tt in TokenTransfer.address_to_unique_tokens(contract_address_hash),
+        where: tt.token_id == ^token_id,
+        preload: [:token]
       )
     case query |> Repo.one() do
       nil ->
         {:error, :not_found}
-      token_instance ->
-        {:ok, token_instance}
+      token_transfer_with_instance ->
+        {:ok, token_transfer_with_instance}
     end
   end
 

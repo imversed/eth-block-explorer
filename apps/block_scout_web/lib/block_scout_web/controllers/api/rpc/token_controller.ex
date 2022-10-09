@@ -43,8 +43,9 @@ defmodule BlockScoutWeb.API.RPC.TokenController do
          {:tokenid_param, {:ok, tokenid_param}} <- fetch_tokenid(params),
          {:ok, token_id} <- to_token_id(tokenid_param),
          {:format, {:ok, address_hash}} <- to_address_hash(contractaddress_param),
-         {:token_instance, {:ok, token_instance}} <- {:token_instance, Chain.address_to_token_instance(address_hash, token_id)} do
-      render(conn, "token_details.json", %{token_instance: token_instance})
+         {:token_transfer, {:ok, token_transfer}} <-
+          {:token_transfer, Chain.token_by_address_and_id(address_hash, token_id)} do
+      render(conn, "token_details.json", %{token_transfer: token_transfer})
     else
       {:contractaddress_param, :error} ->
         render(conn, :error, error: "Query parameter contract address is required")
@@ -58,7 +59,7 @@ defmodule BlockScoutWeb.API.RPC.TokenController do
       {:error, :invalid_token_id} ->
         render(conn, :error, error: "Token id format is invalid (not an integer)")
 
-      {:token_instance, {:error, :not_found}} ->
+      {:token_transfer, {:error, :not_found}} ->
         render(conn, :error, error: "Token not found")
     end
   end
