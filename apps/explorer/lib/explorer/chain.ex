@@ -5135,6 +5135,25 @@ defmodule Explorer.Chain do
     end
   end
 
+  def transfers_by_address_and_type(address_hash, token_type) do
+    query =
+      from(
+        tt in TokenTransfer,
+        join: t in assoc(tt, :token),
+        preload: [:token],
+        where:
+          (tt.to_address_hash == ^address_hash
+          or tt.from_address_hash == ^address_hash)
+          and tt.to_address_hash != ^"0x0000000000000000000000000000000000000000"
+          and t.type == ^token_type,
+        select: tt
+      )
+
+      query
+      |> limit(10_000)
+      |> Repo.all()
+  end
+
   @spec data() :: Dataloader.Ecto.t()
   def data, do: DataloaderEcto.new(Repo)
 

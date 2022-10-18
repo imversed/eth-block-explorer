@@ -64,6 +64,26 @@ defmodule BlockScoutWeb.API.RPC.TokenController do
     end
   end
 
+  def tokentx(conn, params) do
+    with {:address_param, {:ok, address_param}} <- fetch_address(params),
+         {:tokentype_param, {:ok, token_type}} <- fetch_tokentype(params),
+         {:format, {:ok, address_hash}} <- to_address_hash(address_param)
+    do
+      token_type = token_type |> format_tokentype()
+      transfers = Chain.transfers_by_address_and_type(address_hash, token_type)
+      render(conn, "tokentx.json", %{token_transfers: transfers})
+    else
+      {:contractaddress_param, :error} ->
+        render(conn, :error, error: "Query parameter 'address' is required")
+
+      {:format, :error} ->
+        render(conn, :error, error: "Invalid address hash")
+
+      {:tokentype_param, :error} ->
+        render(conn, :error, error: "Query parameter tokentype is required")
+    end
+  end
+
   def gettokenholders(conn, params) do
     with pagination_options <- Helpers.put_pagination_options(%{}, params),
          {:contractaddress_param, {:ok, contractaddress_param}} <- fetch_contractaddress(params),
@@ -101,8 +121,22 @@ defmodule BlockScoutWeb.API.RPC.TokenController do
     {:format, Chain.string_to_address_hash(address_hash_string)}
   end
 
+  defp fetch_address(params) do
+    {:address_param, Map.fetch(params, "address")}
+  end
+
   defp fetch_tokenid(params) do
     {:tokenid_param, Map.fetch(params, "tokenId")}
+  end
+
+  defp fetch_tokentype(params) do
+    {:tokentype_param, Map.fetch(params, "tokentype")}
+  end
+
+  defp format_tokentype(type) do
+    ~r/erc-?(\d+)/i
+    |> Regex.replace(type, "ERC-\\1")
+    |> String.upcase()
   end
 
   defp to_token_id(token_id_string) do

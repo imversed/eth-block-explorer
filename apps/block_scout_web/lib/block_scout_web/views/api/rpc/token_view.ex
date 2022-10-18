@@ -15,6 +15,10 @@ defmodule BlockScoutWeb.API.RPC.TokenView do
     RPCView.render("show.json", data: token_details(tt))
   end
 
+  def render("tokentx.json", %{token_transfers: transfers}) do
+    RPCView.render("show.json", data: transfers |> Enum.map(&prepare_transfer_for_tx/1))
+  end
+
   def render("gettokenholders.json", %{token_holders: token_holders}) do
     data = Enum.map(token_holders, &prepare_token_holder/1)
     RPCView.render("show.json", data: data)
@@ -48,6 +52,17 @@ defmodule BlockScoutWeb.API.RPC.TokenView do
       "tokenId" => token_transfer.token_id,
       "ownerAddress" => to_string(token_transfer.to_address),
       "contractAddress" => to_string(token_transfer.token_contract_address_hash)
+    }
+  end
+
+  defp prepare_transfer_for_tx(tt) do
+    %{
+      "token_type" => tt.token.type,
+      "from_address" => tt.from_address_hash,
+      "to_address" => tt.to_address_hash,
+      "contract_address" => to_string(tt.token_contract_address_hash),
+      "token_id" => tt.token_id,
+      "token_amount" => tt.amount
     }
   end
 
