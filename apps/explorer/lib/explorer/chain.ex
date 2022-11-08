@@ -5119,6 +5119,41 @@ defmodule Explorer.Chain do
     |> Repo.all()
   end
 
+  @spec token_by_address_and_id(Hash.Address.t(), integer()) :: {:ok, [TokenTransfer.t()]}
+  def token_by_address_and_id(contract_address_hash, token_id) do
+    query =
+      from(
+        tt in TokenTransfer.address_to_unique_tokens(contract_address_hash),
+        where: tt.token_id == ^token_id,
+        preload: [:token]
+      )
+    case query |> Repo.one() do
+      nil ->
+        {:error, :not_found}
+      token_transfer_with_instance ->
+        {:ok, token_transfer_with_instance}
+    end
+  end
+
+  def transfers_by_address_and_type(address_hash, token_type) do
+    query =
+      from(
+        tt in TokenTransfer,
+        join: t in assoc(tt, :token),
+        preload: [:token],
+        where:
+          (tt.to_address_hash == ^address_hash
+          or tt.from_address_hash == ^address_hash)
+          and tt.to_address_hash != ^"0x0000000000000000000000000000000000000000"
+          and t.type == ^token_type,
+        select: tt
+      )
+
+      query
+      |> limit(10_000)
+      |> Repo.all()
+  end
+
   @spec data() :: Dataloader.Ecto.t()
   def data, do: DataloaderEcto.new(Repo)
 
