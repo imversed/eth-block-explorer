@@ -307,30 +307,47 @@ defmodule Explorer.Etherscan do
     Repo.replica().one(query)
   end
 
+  defp list_tokens_query(%Hash{byte_count: unquote(Hash.Address.byte_count())} = address_hash) do
+    from(
+      ctb in CurrentTokenBalance,
+      inner_join: t in assoc(ctb, :token),
+      where: ctb.address_hash == ^address_hash,
+      where: ctb.value > 0,
+      select: %{
+        balance: ctb.value,
+        contract_address_hash: ctb.token_contract_address_hash,
+        name: t.name,
+        decimals: t.decimals,
+        symbol: t.symbol,
+        type: t.type,
+        id: ctb.token_id
+      }
+    )
+  end
+
   @doc """
   Gets a list of tokens owned by the given address hash.
 
   """
   @spec list_tokens(Hash.Address.t()) :: map() | []
-  def list_tokens(%Hash{byte_count: unquote(Hash.Address.byte_count())} = address_hash) do
-    query =
-      from(
-        ctb in CurrentTokenBalance,
-        inner_join: t in assoc(ctb, :token),
-        where: ctb.address_hash == ^address_hash,
-        where: ctb.value > 0,
-        select: %{
-          balance: ctb.value,
-          contract_address_hash: ctb.token_contract_address_hash,
-          name: t.name,
-          decimals: t.decimals,
-          symbol: t.symbol,
-          type: t.type,
-          id: ctb.token_id
-        }
-      )
+  def list_tokens(address_hash) do
+    list_tokens_query(address_hash)
+    |> Repo.replica().all()
+  end
 
-    Repo.replica().all(query)
+  def list_tokens(address_hash, options) do
+    merged_options = Map.merge(@default_options, options)
+
+    query = list_tokens_query(address_hash)
+    with_pagination = from(
+      t in query,
+      limit: ^merged_options.page_size,
+      offset: ^offset(merged_options)
+    )
+
+    with_pagination
+    |> where_token_type_matches(merged_options)
+    |> Repo.replica().all()
   end
 
   @transaction_fields ~w(

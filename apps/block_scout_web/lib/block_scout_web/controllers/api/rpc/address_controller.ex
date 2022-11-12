@@ -203,10 +203,11 @@ defmodule BlockScoutWeb.API.RPC.AddressController do
   end
 
   def tokenlist(conn, params) do
+    options = optional_params(params)
     with {:address_param, {:ok, address_param}} <- fetch_address(params),
          {:format, {:ok, address_hash}} <- to_address_hash(address_param),
          {:address, :ok} <- {:address, Chain.check_address_exists(address_hash)},
-         {:ok, token_list} <- list_tokens(address_hash) do
+         {:ok, token_list} <- list_tokens(address_hash, options) do
       render(conn, :token_list, %{token_list: token_list})
     else
       {:address_param, :error} ->
@@ -545,8 +546,8 @@ defmodule BlockScoutWeb.API.RPC.AddressController do
     end
   end
 
-  defp list_tokens(address_hash) do
-    case Etherscan.list_tokens(address_hash) do
+  defp list_tokens(address_hash, options) do
+    case Etherscan.list_tokens(address_hash, options) do
       [] -> {:error, :not_found}
       token_list -> {:ok, token_list}
     end
