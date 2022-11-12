@@ -157,6 +157,7 @@ defmodule BlockScoutWeb.API.RPC.AddressView do
       "tokenName" => token_transfer.token_name,
       "tokenSymbol" => token_transfer.token_symbol,
       "tokenDecimal" => to_string(token_transfer.token_decimals),
+      "tokenType" => to_string(token_transfer.token_type),
       "transactionIndex" => to_string(token_transfer.transaction_index),
       "gas" => to_string(token_transfer.transaction_gas),
       "gasPrice" => to_string(token_transfer.transaction_gas_price.value),

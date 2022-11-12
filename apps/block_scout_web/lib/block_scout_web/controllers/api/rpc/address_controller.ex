@@ -254,6 +254,7 @@ defmodule BlockScoutWeb.API.RPC.AddressController do
     |> put_filter_by(params)
     |> put_start_timestamp(params)
     |> put_end_timestamp(params)
+    |> put_token_type(params)
   end
 
   @doc """
@@ -288,6 +289,12 @@ defmodule BlockScoutWeb.API.RPC.AddressController do
 
   defp fetch_block_param(%{"block" => _block}), do: :error
   defp fetch_block_param(_), do: {:ok, :latest}
+
+  defp format_tokentype(type) do
+    ~r/erc-?(\d+)/i
+    |> Regex.replace(type, "ERC-\\1")
+    |> String.upcase()
+  end
 
   defp to_valid_format(params, :tokenbalance) do
     result =
@@ -441,6 +448,16 @@ defmodule BlockScoutWeb.API.RPC.AddressController do
     with %{"endblock" => endblock_param} <- params,
          {end_block, ""} <- Integer.parse(endblock_param) do
       Map.put(options, :end_block, end_block)
+    else
+      _ ->
+        options
+    end
+  end
+
+  defp put_token_type(options, params) do
+    with %{"tokentype" => tokentype_param} <- params,
+         token_type <- format_tokentype(tokentype_param) do
+         Map.put(options, :token_type, token_type)
     else
       _ ->
         options

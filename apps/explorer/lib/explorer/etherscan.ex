@@ -18,7 +18,8 @@ defmodule Explorer.Etherscan do
     start_block: nil,
     end_block: nil,
     start_timestamp: nil,
-    end_timestamp: nil
+    end_timestamp: nil,
+    token_type: nil
   }
 
   @burn_address_hash_str "0x0000000000000000000000000000000000000000"
@@ -493,6 +494,7 @@ defmodule Explorer.Etherscan do
     wrapped_query
     |> where_start_block_match(options)
     |> where_end_block_match(options)
+    |> where_token_type_matches(options)
     |> Repo.replica().all()
   end
 
@@ -527,6 +529,11 @@ defmodule Explorer.Etherscan do
   end
 
   defp offset(options), do: (options.page_number - 1) * options.page_size
+
+  defp where_token_type_matches(query, %{token_type: nil}), do: query
+  defp where_token_type_matches(query, %{token_type: token_type}) do
+    where(query, [tt, _], tt.token_type == ^token_type)
+  end
 
   @doc """
   Gets a list of logs that meet the criteria in a given filter map.
