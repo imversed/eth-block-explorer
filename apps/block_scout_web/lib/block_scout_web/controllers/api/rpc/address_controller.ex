@@ -203,10 +203,11 @@ defmodule BlockScoutWeb.API.RPC.AddressController do
   end
 
   def tokenlist(conn, params) do
+    options = optional_params(params)
     with {:address_param, {:ok, address_param}} <- fetch_address(params),
          {:format, {:ok, address_hash}} <- to_address_hash(address_param),
          {:address, :ok} <- {:address, Chain.check_address_exists(address_hash)},
-         {:ok, token_list} <- list_tokens(address_hash) do
+         {:ok, token_list} <- list_tokens(address_hash, options) do
       render(conn, :token_list, %{token_list: token_list})
     else
       {:address_param, :error} ->
@@ -254,6 +255,7 @@ defmodule BlockScoutWeb.API.RPC.AddressController do
     |> put_filter_by(params)
     |> put_start_timestamp(params)
     |> put_end_timestamp(params)
+    |> put_token_type(params)
   end
 
   @doc """
@@ -288,6 +290,12 @@ defmodule BlockScoutWeb.API.RPC.AddressController do
 
   defp fetch_block_param(%{"block" => _block}), do: :error
   defp fetch_block_param(_), do: {:ok, :latest}
+
+  defp format_tokentype(type) do
+    ~r/erc-?(\d+)/i
+    |> Regex.replace(type, "ERC-\\1")
+    |> String.upcase()
+  end
 
   defp to_valid_format(params, :tokenbalance) do
     result =
@@ -447,6 +455,16 @@ defmodule BlockScoutWeb.API.RPC.AddressController do
     end
   end
 
+  defp put_token_type(options, params) do
+    with %{"tokentype" => tokentype_param} <- params,
+         token_type <- format_tokentype(tokentype_param) do
+         Map.put(options, :token_type, token_type)
+    else
+      _ ->
+        options
+    end
+  end
+
   defp put_filter_by(options, params) do
     case params do
       %{"filterby" => filter_by} when filter_by in ["from", "to"] ->
@@ -528,8 +546,8 @@ defmodule BlockScoutWeb.API.RPC.AddressController do
     end
   end
 
-  defp list_tokens(address_hash) do
-    case Etherscan.list_tokens(address_hash) do
+  defp list_tokens(address_hash, options) do
+    case Etherscan.list_tokens(address_hash, options) do
       [] -> {:error, :not_found}
       token_list -> {:ok, token_list}
     end
