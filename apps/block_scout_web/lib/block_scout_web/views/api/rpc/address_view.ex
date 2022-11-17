@@ -172,6 +172,8 @@ defmodule BlockScoutWeb.API.RPC.AddressView do
     token_transfer
     |> prepare_common_token_transfer()
     |> Map.put_new(:tokenID, token_transfer.token_id)
+    # For ERC-721 tokens, if the amount is not specified explicitly, assume 1
+    |> Map.put_new(:value, to_string(token_transfer.amount || 1))
   end
 
   defp prepare_token_transfer(%{token_type: "ERC-1155"} = token_transfer) do
