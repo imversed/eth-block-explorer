@@ -77,6 +77,8 @@ defmodule Explorer.Chain do
   alias Explorer.{PagingOptions, Repo}
   alias Explorer.SmartContract.{Helper, Reader}
 
+  alias Explorer.Token.InstanceMetadataRetriever
+
   alias Dataloader.Ecto, as: DataloaderEcto
 
   @default_paging_options %PagingOptions{page_size: 50}
@@ -5127,11 +5129,15 @@ defmodule Explorer.Chain do
         where: tt.token_id == ^token_id,
         preload: [:token]
       )
-    case query |> Repo.one() do
-      nil ->
-        {:error, :not_found}
-      token_transfer_with_instance ->
-        {:ok, token_transfer_with_instance}
+
+    with token_transfer_with_instance when not is_nil(token_transfer_with_instance) <- Repo.one(query),
+         {:ok, token_uri} <- InstanceMetadataRetriever.fetch_metadata_uri(to_string(contract_address_hash), token_id) do
+      {:ok, Map.put(token_transfer_with_instance, :token_uri, token_uri)}
+    else
+        nil ->
+          {:error, :not_found}
+        {:error, :failed_to_fetch_metadata_uri} ->
+          {:ok, :failed_to_fetch_metadata_uri}
     end
   end
 

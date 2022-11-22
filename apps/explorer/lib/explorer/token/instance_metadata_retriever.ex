@@ -65,23 +65,37 @@ defmodule Explorer.Token.InstanceMetadataRetriever do
     |> fetch_json()
   end
 
-  def fetch_metadata(contract_address_hash, token_id) do
+  defp get_metadata_uri(contract_address_hash, token_id) do
     # c87b56dd =  keccak256(tokenURI(uint256))
     contract_functions = %{@token_uri => [token_id]}
 
     res =
       contract_address_hash
       |> query_contract(contract_functions, @abi)
-      |> fetch_json()
 
     if res == {:ok, %{error: @vm_execution_error}} do
       contract_functions_uri = %{@uri => [token_id]}
 
       contract_address_hash
       |> query_contract(contract_functions_uri, @abi_uri)
-      |> fetch_json()
     else
       res
+    end
+  end
+
+  def fetch_metadata(contract_address_hash, token_id) do
+    get_metadata_uri(contract_address_hash, token_id)
+    |> fetch_json()
+  end
+
+  def fetch_metadata_uri(contract_address_hash, token_id) do
+    case get_metadata_uri(contract_address_hash, token_id) do
+      %{@token_uri => {:ok, [uri]}} ->
+        {:ok, uri}
+      %{@uri => {:ok, [uri]}} ->
+        {:ok, uri}
+      _ ->
+        {:error, :failed_to_fetch_metadata_uri}
     end
   end
 

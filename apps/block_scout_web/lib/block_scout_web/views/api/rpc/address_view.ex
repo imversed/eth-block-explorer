@@ -172,6 +172,8 @@ defmodule BlockScoutWeb.API.RPC.AddressView do
     token_transfer
     |> prepare_common_token_transfer()
     |> Map.put_new(:tokenID, token_transfer.token_id)
+    # For ERC-721 tokens, if the amount is not specified explicitly, assume 1
+    |> Map.put_new(:value, to_string(token_transfer.amount || 1))
   end
 
   defp prepare_token_transfer(%{token_type: "ERC-1155"} = token_transfer) do
@@ -197,7 +199,7 @@ defmodule BlockScoutWeb.API.RPC.AddressView do
     }
   end
 
-  defp prepare_token(token) do
+  defp prepare_token_base(token) do
     %{
       "balance" => to_string(token.balance),
       "contractAddress" => to_string(token.contract_address_hash),
@@ -207,6 +209,17 @@ defmodule BlockScoutWeb.API.RPC.AddressView do
       "type" => token.type
     }
     |> (&if(is_nil(token.id), do: &1, else: Map.put(&1, "id", token.id))).()
+  end
+
+  defp prepare_token(%{:type => "ERC-721"} = token) do
+    prepare_token_base(token)
+    |> Map.merge(%{
+      "metadata" => token[:metadata],
+      "token_uri" => token[:token_uri]
+      })
+  end
+  defp prepare_token(token) do
+    prepare_token_base(token)
   end
 
   defp balance(address) do

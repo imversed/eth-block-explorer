@@ -59,6 +59,9 @@ defmodule BlockScoutWeb.API.RPC.TokenController do
       {:error, :invalid_token_id} ->
         render(conn, :error, error: "Token id format is invalid (not an integer)")
 
+      {:error, :failed_to_fetch_metadata_uri} ->
+        render(conn, :error, error: "Failed to get token metadata URI")
+
       {:token_transfer, {:error, :not_found}} ->
         render(conn, :error, error: "Token not found")
     end
@@ -99,10 +102,6 @@ defmodule BlockScoutWeb.API.RPC.TokenController do
 
   defp to_address_hash(address_hash_string) do
     {:format, Chain.string_to_address_hash(address_hash_string)}
-  end
-
-  defp fetch_address(params) do
-    {:address_param, Map.fetch(params, "address")}
   end
 
   defp fetch_tokenid(params) do

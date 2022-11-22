@@ -72,7 +72,8 @@ defmodule BlockScoutWeb.API.RPC.TokenView do
         :token_id,
         :token_contract_address_hash,
         :block_number,
-        :amount])
+        :amount,
+        :token_uri])
     token_fields = tt.token
     |> Map.take([
       :symbol,
