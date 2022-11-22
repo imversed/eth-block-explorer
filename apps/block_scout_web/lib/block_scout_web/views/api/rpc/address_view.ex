@@ -199,7 +199,7 @@ defmodule BlockScoutWeb.API.RPC.AddressView do
     }
   end
 
-  defp prepare_token(token) do
+  defp prepare_token_base(token) do
     %{
       "balance" => to_string(token.balance),
       "contractAddress" => to_string(token.contract_address_hash),
@@ -209,6 +209,17 @@ defmodule BlockScoutWeb.API.RPC.AddressView do
       "type" => token.type
     }
     |> (&if(is_nil(token.id), do: &1, else: Map.put(&1, "id", token.id))).()
+  end
+
+  defp prepare_token(%{:type => "ERC-721"} = token) do
+    prepare_token_base(token)
+    |> Map.merge(%{
+      "metadata" => token[:metadata],
+      "token_uri" => token[:token_uri]
+      })
+  end
+  defp prepare_token(token) do
+    prepare_token_base(token)
   end
 
   defp balance(address) do

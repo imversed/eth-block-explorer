@@ -547,9 +547,27 @@ defmodule BlockScoutWeb.API.RPC.AddressController do
   end
 
   defp list_tokens(address_hash, options) do
-    case Etherscan.list_tokens(address_hash, options) do
-      [] -> {:error, :not_found}
-      token_list -> {:ok, token_list}
+    with {:token_list, token_list} <- {:token_list, Etherscan.list_tokens(address_hash, options)}
+    do
+      enriched_tokens = enrich_tokens_with_uris(token_list)
+      {:ok, enriched_tokens}
+    else
+      {:token_list, []} ->
+        {:error, :not_found}
+    end
+  end
+
+  defp enrich_tokens_with_uris(tokens) do
+    tokens
+    |> Enum.map(&maybe_add_token_uri/1)
+  end
+
+  defp maybe_add_token_uri(token) do
+    case Explorer.Token.InstanceMetadataRetriever.fetch_metadata_uri(to_string(token.contract_address_hash), token.id) do
+      {:ok, token_uri} ->
+        Map.put(token, :token_uri, token_uri)
+      {:error, :failed_to_fetch_metadata_uri} ->
+         token
     end
   end
 end
