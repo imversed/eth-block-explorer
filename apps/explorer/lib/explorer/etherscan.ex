@@ -8,7 +8,7 @@ defmodule Explorer.Etherscan do
   alias Explorer.Etherscan.Logs
   alias Explorer.{Chain, Repo}
   alias Explorer.Chain.Address.{CurrentTokenBalance, TokenBalance}
-  alias Explorer.Chain.{Address, Block, Hash, InternalTransaction, TokenTransfer, Transaction, Token}
+  alias Explorer.Chain.{Address, Block, Hash, InternalTransaction, TokenTransfer, Transaction}
   alias Explorer.Chain.Transaction.History.TransactionStats
 
   @default_options %{
@@ -311,10 +311,6 @@ defmodule Explorer.Etherscan do
     from(
       ctb in CurrentTokenBalance,
       inner_join: t in assoc(ctb, :token),
-      left_join: instance in Token.Instance,
-      on:
-        ctb.token_id == instance.token_id and
-        ctb.token_contract_address_hash == instance.token_contract_address_hash,
       where: ctb.address_hash == ^address_hash,
       where: ctb.value > 0,
       select: %{
@@ -324,8 +320,7 @@ defmodule Explorer.Etherscan do
         decimals: t.decimals,
         symbol: t.symbol,
         type: t.type,
-        id: ctb.token_id,
-        metadata: instance.metadata
+        id: ctb.token_id
       }
     )
   end
