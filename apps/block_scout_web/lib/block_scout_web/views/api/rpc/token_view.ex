@@ -15,6 +15,10 @@ defmodule BlockScoutWeb.API.RPC.TokenView do
     RPCView.render("show.json", data: token_details(tt))
   end
 
+  def render("tokenx.json", %{tokenx: tokenx}) do
+    RPCView.render("show.json", data: tokenx)
+  end
+
   def render("tokentx.json", %{token_transfers: transfers}) do
     RPCView.render("show.json", data: transfers |> Enum.map(&prepare_transfer_for_tx/1))
   end
