@@ -67,6 +67,35 @@ defmodule BlockScoutWeb.API.RPC.TokenController do
     end
   end
 
+  def tokenx(conn, params) do
+    with {:contractaddress_param, {:ok, contractaddress_param}} <- fetch_contractaddress(params),
+         {:tokenid_param, {:ok, tokenid_param}} <- fetch_tokenid(params),
+         {:ok, token_id} <- to_token_id(tokenid_param),
+         {:format, {:ok, address_hash}} <- to_address_hash(contractaddress_param),
+         {:tokenx, {:ok, tokenx}} <-
+          {:tokenx, Chain.tokenx_by_address_and_id(address_hash, token_id)} do
+      render(conn, "tokenx.json", %{tokenx: tokenx})
+    else
+      {:contractaddress_param, :error} ->
+        render(conn, :error, error: "Query parameter contract address is required")
+
+      {:format, :error} ->
+        render(conn, :error, error: "Invalid contract address hash")
+
+      {:tokenid_param, :error} ->
+        render(conn, :error, error: "Query parameter token id is required")
+
+      {:error, :invalid_token_id} ->
+        render(conn, :error, error: "Token id format is invalid (not an integer)")
+
+      {:error, :failed_to_fetch_metadata_uri} ->
+        render(conn, :error, error: "Failed to get token metadata URI")
+
+      {:tokenx, {:error, :not_found}} ->
+        render(conn, :error, error: "Token not found")
+    end
+  end
+
   def gettokenholders(conn, params) do
     with pagination_options <- Helpers.put_pagination_options(%{}, params),
          {:contractaddress_param, {:ok, contractaddress_param}} <- fetch_contractaddress(params),

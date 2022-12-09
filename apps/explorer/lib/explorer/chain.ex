@@ -5141,6 +5141,91 @@ defmodule Explorer.Chain do
     end
   end
 
+# tokenx_by_address_and_id is based on the following SQL query:
+#
+#   select
+#     tokens.contract_address_hash as token_address,
+#     ti.token_id,
+#     (select tt.block_number
+#      from token_transfers tt
+#      where ti.token_id = tt.token_id and tokens.contract_address_hash = tt.token_contract_address_hash
+#        and from_address_hash = E'\\x0000000000000000000000000000000000000000' limit 1) as block_number_minted,
+#     CASE WHEN ti.token_id IS NULL
+#      THEN total_supply
+#      ELSE 1
+#     END AS amount,
+#     (select to_address_hash
+#      from token_transfers as tt
+#      where ti.token_id = tt.token_id and ti.token_contract_address_hash = tt.token_contract_address_hash
+#      order by tt.block_number desc limit 1
+#      ) as owner_of,
+#     tokens.type as contract_type,
+#     tokens.name,
+#     tokens.symbol,
+#     -- token uri,
+#     ti.metadata,
+#     (select tt.to_address_hash
+#      from token_transfers tt
+#      where ti.token_id = tt.token_id and tokens.contract_address_hash = tt.token_contract_address_hash
+#        and from_address_hash = E'\\x0000000000000000000000000000000000000000' limit 1) as minter_address
+# from tokens
+#      left join token_instances ti
+#          on tokens.contract_address_hash = ti.token_contract_address_hash
+# where tokens.contract_address_hash = ^ and ti.token_id = ^;
+#
+# In addition to the data from the database the token_uri is requested from the contract and added to the map being returned.
+  def tokenx_by_address_and_id(contract_address_hash, token_id) do
+    first_transfer_query =
+      from(
+        tt in TokenTransfer,
+        where: tt.from_address_hash == ^"0x0000000000000000000000000000000000000000"
+      )
+    last_transfer_query =
+      from(
+        tt in TokenTransfer,
+        order_by: [desc: tt.block_number]
+      )
+    query =
+      from(
+        t in Token, as: :token,
+        left_join: ti in Instance,
+          as: :instance,
+          on: t.contract_address_hash == ti.token_contract_address_hash,
+        left_join: ftt in subquery(first_transfer_query),
+          as: :first_transfer,
+          on: ftt.token_contract_address_hash == t.contract_address_hash and ftt.token_id == ti.token_id,
+        left_join: ltt in subquery(last_transfer_query),
+          as: :last_transfer,
+          on: ltt.token_contract_address_hash == t.contract_address_hash and ltt.token_id == ti.token_id,
+        where: t.contract_address_hash == ^contract_address_hash,
+        where: ti.token_id == ^token_id,
+        limit: 1,
+        select: %{
+          token_address: t.contract_address_hash,
+          total_supply: t.total_supply,
+          amount: 1,
+          token_id: ti.token_id,
+          metadata: ti.metadata,
+          contract_type: t.type,
+          name: t.name,
+          symbol: t.symbol,
+          minter_address: ftt.to_address_hash,
+          block_number_minted: ftt.block_number,
+          owner_address: ltt.to_address_hash
+        }
+      )
+
+    with tokenx when not is_nil(tokenx) <- Repo.one(query),
+         {:ok, token_uri} <- InstanceMetadataRetriever.fetch_metadata_uri(to_string(contract_address_hash), token_id) do
+      {:ok, Map.put(tokenx, :token_uri, token_uri)}
+    else
+      nil ->
+        {:error, :not_found}
+      {:error, :failed_to_fetch_metadata_uri} ->
+          {:ok, :failed_to_fetch_metadata_uri}
+    end
+  end
+
   def transfers_by_address_and_type(address_hash, token_type) do
     query =
       from(
