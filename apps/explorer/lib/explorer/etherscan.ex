@@ -5,6 +5,7 @@ defmodule Explorer.Etherscan do
 
   import Ecto.Query, only: [from: 2, where: 3, or_where: 3, union: 2, subquery: 1, order_by: 3]
 
+  # alias Indexer.Fetcher.TokenInstance
   alias Explorer.Etherscan.Logs
   alias Explorer.{Chain, Repo}
   alias Explorer.Chain.Address.{CurrentTokenBalance, TokenBalance}
@@ -339,6 +340,146 @@ defmodule Explorer.Etherscan do
     merged_options = Map.merge(@default_options, options)
 
     query = list_tokens_query(address_hash)
+    with_pagination = from(
+      t in query,
+      limit: ^merged_options.page_size,
+      offset: ^offset(merged_options)
+    )
+
+    with_pagination
+      |> where_token_type_matches(merged_options)
+      |> Repo.replica().all()
+  end
+
+# select
+#   x.contractType,
+#   x.blockNumberMinted,
+#   x.transactionHash as hash,
+#   b.number as blockNumber,
+#   b.timestamp,
+#   b.hash as blockHash,
+#   x.contractAddress as contractAddress,
+#   t.index as transactionIndex,
+#   t.nonce as nonce,
+#   t.from_address_hash as "from",
+#   t.to_address_hash as "to",
+#   x.tokenId,
+#   CASE WHEN x.tokenId IS NULL
+#    THEN x.value
+#    ELSE 1
+#   END AS value,
+#   x.tokenName,
+#   x.tokenSymbol,
+#   15 as confirmations,
+#   x.ownerOf,
+#   x.metadata
+# from
+#   (select
+#       token_type as contractType,
+#       (select tt.block_number
+#        from token_transfers tt
+#        where erc721.token_id = tt.token_id and balance.token_contract_address_hash = tt.token_contract_address_hash
+#        and from_address_hash = E'\\x0000000000000000000000000000000000000000' limit 1) as blockNumberMinted,
+#       (select tt.transaction_hash
+#        from token_transfers tt
+#        where (erc721.token_id = tt.token_id and balance.token_contract_address_hash = tt.token_contract_address_hash)
+#           or (tt.to_address_hash = balance.address_hash and balance.token_contract_address_hash = tt.token_contract_address_hash)
+#        order by tt.block_number desc limit 1) as transactionHash,
+#       balance.inserted_at as inserted,
+#       balance.token_contract_address_hash as contractAddress,
+#       CASE WHEN erc721.token_id IS NULL
+#        THEN balance.token_id
+#        ELSE erc721.token_id
+#       END AS tokenId,
+#       tokens.name as tokenName,
+#       tokens.symbol as tokenSymbol,
+#       (select from_address_hash
+#        from transactions
+#        where created_contract_address_hash = balance.token_contract_address_hash and to_address_hash is null limit 1) as ownerOf,
+#       balance.value,
+#       balance.address_hash as address,
+#       erc721.metadata
+
+#    from address_current_token_balances as balance
+#    left join token_instances as erc721 on erc721.token_contract_address_hash = balance.token_contract_address_hash
+#    left join tokens on tokens.contract_address_hash = balance.token_contract_address_hash
+#   ) as x
+# left join transactions as t on x.transactionHash = t.hash
+# left join blocks as b on t.block_number = b.number
+# where x.address = ^addressHash;
+  def list_tokens_x(address_hash, options) do
+
+    first_transfer_query =
+      from(
+        tt in TokenTransfer,
+        where: tt.from_address_hash == ^"0x0000000000000000000000000000000000000000"
+      )
+
+      last_transfer_query =
+        from(
+          tt in TokenTransfer,
+          order_by: [desc: tt.block_number]
+        )
+
+      last_transaction_query =
+        from(
+          tx in Explorer.Chain.Transaction,
+          where: is_nil(tx.to_address_hash)
+        )
+
+      query = from(
+        balance in Explorer.Chain.Address.CurrentTokenBalance,
+          as: :balance,
+        left_join: erc721 in Explorer.Chain.Token.Instance,
+          as: :erc721,
+          on: erc721.token_contract_address_hash == balance.token_contract_address_hash,
+        left_join: t in Explorer.Chain.Token,
+          as: :token,
+          on: t.contract_address_hash == balance.token_contract_address_hash,
+        left_join: ftt in subquery(first_transfer_query),
+          as: :first_transfer,
+          on: ftt.token_contract_address_hash == balance.token_contract_address_hash and erc721.token_id == ftt.token_id,
+        left_join: ltt in subquery(last_transfer_query),
+          as: :last_transfer,
+          on: ltt.token_contract_address_hash == balance.token_contract_address_hash and
+            (ltt.token_id == erc721.token_id or ltt.to_address_hash == balance.address_hash),
+        left_join: ltx in subquery(last_transaction_query),
+          as: :last_transaction,
+          on: ltx.created_contract_address_hash == balance.token_contract_address_hash,
+        left_join: tx in Explorer.Chain.Transaction,
+          as: :last_transfer_tx,
+          on: tx.hash == ltt.transaction_hash,
+        left_join: block in Explorer.Chain.Block,
+          as: :block,
+          on: tx.block_number == block.number,
+        where: balance.address_hash == ^address_hash,
+        distinct: tx.hash,
+        limit: 1,
+        select: %{
+          contractType: t.type,
+          block_number_minted: ftt.block_number,
+          transactionHash: ltt.transaction_hash,
+          inserted: balance.inserted_at,
+          contractAddress: balance.token_contract_address_hash,
+          token_id_erc721: erc721.token_id,
+          token_id_other: balance.token_id,
+          tokenName: t.name,
+          tokenSymbol: t.symbol,
+          ownerOf: ltx.from_address_hash,
+          value: balance.value,
+          address: balance.address_hash,
+          metadata: erc721.metadata,
+          transactionIndex: tx.index,
+          nonce: tx.nonce,
+          from: tx.from_address_hash,
+          to: tx.to_address_hash,
+          blockNumber: block.number,
+          timestamp: block.timestamp,
+          blockHash: block.hash
+        }
+      )
+    merged_options = Map.merge(@default_options, options)
+
     with_pagination = from(
       t in query,
       limit: ^merged_options.page_size,

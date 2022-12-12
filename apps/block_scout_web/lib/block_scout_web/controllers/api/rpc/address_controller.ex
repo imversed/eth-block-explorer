@@ -221,6 +221,25 @@ defmodule BlockScoutWeb.API.RPC.AddressController do
     end
   end
 
+  def tokenlistx(conn, params) do
+    options = optional_params(params)
+    with {:address_param, {:ok, address_param}} <- fetch_address(params),
+         {:format, {:ok, address_hash}} <- to_address_hash(address_param),
+         {:address, :ok} <- {:address, Chain.check_address_exists(address_hash)},
+         {:ok, token_list} <- list_tokens_x(address_hash, options) do
+      render(conn, :token_list_x, %{token_list: token_list})
+    else
+      {:address_param, :error} ->
+        render(conn, :error, error: "Query parameter address is required")
+
+      {:format, :error} ->
+        render(conn, :error, error: "Invalid address format")
+
+      {_, :not_found} ->
+        render(conn, :error, error: "No tokens found", data: [])
+    end
+  end
+
   def getminedblocks(conn, params) do
     options = Helpers.put_pagination_options(%{}, params)
 
@@ -549,7 +568,7 @@ defmodule BlockScoutWeb.API.RPC.AddressController do
   defp list_tokens(address_hash, options) do
     with {:token_list, token_list} <- {:token_list, Etherscan.list_tokens(address_hash, options)}
     do
-      enriched_tokens = enrich_tokens_with_uris(token_list)
+      enriched_tokens = Enum.map(token_list, fn(token) -> maybe_add_token_uri(token) end)
       {:ok, enriched_tokens}
     else
       {:token_list, []} ->
@@ -557,17 +576,44 @@ defmodule BlockScoutWeb.API.RPC.AddressController do
     end
   end
 
-  defp enrich_tokens_with_uris(tokens) do
-    tokens
-    |> Enum.map(&maybe_add_token_uri/1)
+  defp list_tokens_x(address_hash, options) do
+    tokens = Etherscan.list_tokens_x(address_hash, options)
+      |> Enum.map(&merge_token_ids/1)
+      |> Enum.map(fn(x) ->
+        maybe_add_token_uri(x, :contractAddress, :tokenId)
+      end)
+    {:ok, tokens}
   end
 
-  defp maybe_add_token_uri(token) do
-    case Explorer.Token.InstanceMetadataRetriever.fetch_metadata_uri(to_string(token.contract_address_hash), token.id) do
+  defp merge_token_ids(m) do
+    {token_id_erc721, m} = Map.pop(m, :token_id_erc721)
+    {token_id_other, m} = Map.pop(m, :token_id_other)
+    token_id = if is_nil(token_id_erc721) do
+        token_id_other
+      else
+        token_id_erc721
+      end
+    m |> Map.put_new(:tokenId, token_id)
+  end
+
+  defp maybe_add_token_uri(token, contract_address_hash_key\\:contract_address_hash, token_id_key\\:id) do
+    contract_hash = token |> Map.get(contract_address_hash_key) |> to_string()
+    token_id = token |> Map.get(token_id_key) |> undecimal()
+    case Explorer.Token.InstanceMetadataRetriever.fetch_metadata_uri(contract_hash, token_id) do
       {:ok, token_uri} ->
-        Map.put(token, :token_uri, token_uri)
+        Map.put(token, :tokenUri, token_uri)
       {:error, :failed_to_fetch_metadata_uri} ->
          token
+    end
+  end
+
+  require Decimal
+
+  defp undecimal(d) do
+    if Decimal.is_decimal(d) do
+      Decimal.to_integer(d)
+    else
+      d
     end
   end
 end
