@@ -432,7 +432,7 @@ defmodule Explorer.Etherscan do
           as: :balance,
         left_join: erc721 in Explorer.Chain.Token.Instance,
           as: :erc721,
-          on: erc721.token_contract_address_hash == balance.token_contract_address_hash,
+          on: erc721.token_contract_address_hash == balance.token_contract_address_hash and erc721.token_id == balance.token_id,
         left_join: t in Explorer.Chain.Token,
           as: :token,
           on: t.contract_address_hash == balance.token_contract_address_hash,
