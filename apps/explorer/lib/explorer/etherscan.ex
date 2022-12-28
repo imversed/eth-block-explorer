@@ -438,7 +438,7 @@ defmodule Explorer.Etherscan do
           on: t.contract_address_hash == balance.token_contract_address_hash,
         left_join: ftt in subquery(first_transfer_query),
           as: :first_transfer,
-          on: ftt.token_contract_address_hash == balance.token_contract_address_hash and erc721.token_id == ftt.token_id,
+          on: ftt.token_contract_address_hash == balance.token_contract_address_hash and erc721.token_id == ftt.value,
         left_join: ltt in subquery(last_transfer_query),
           as: :last_transfer,
           on: ltt.token_contract_address_hash == balance.token_contract_address_hash and
@@ -466,7 +466,7 @@ defmodule Explorer.Etherscan do
           tokenName: t.name,
           tokenSymbol: t.symbol,
           ownerOf: ltx.from_address_hash,
-          value: balance.value,
+          value_token: balance.value,
           address: balance.address_hash,
           metadata: erc721.metadata,
           transactionIndex: tx.index,

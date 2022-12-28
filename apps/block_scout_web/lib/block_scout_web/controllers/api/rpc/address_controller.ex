@@ -588,12 +588,19 @@ defmodule BlockScoutWeb.API.RPC.AddressController do
   defp merge_token_ids(m) do
     {token_id_erc721, m} = Map.pop(m, :token_id_erc721)
     {token_id_other, m} = Map.pop(m, :token_id_other)
+    {value_token, m} = Map.pop(m, :value_token)
     token_id = if is_nil(token_id_erc721) do
         token_id_other
       else
         token_id_erc721
       end
+    value = if is_nil(token_id_erc721) do
+        value_token
+      else
+        1
+      end
     m |> Map.put_new(:tokenId, token_id)
+    m |> Map.put_new(:value, value)
   end
 
   defp maybe_add_token_uri(token, contract_address_hash_key\\:contract_address_hash, token_id_key\\:id) do
