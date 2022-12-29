@@ -600,7 +600,7 @@ defmodule BlockScoutWeb.API.RPC.AddressController do
         1
       end
     m |> Map.put_new(:tokenId, token_id)
-    m |> Map.put_new(:value, value)
+      |> Map.put_new(:value, value)
   end
 
   defp maybe_add_token_uri(token, contract_address_hash_key\\:contract_address_hash, token_id_key\\:id) do
