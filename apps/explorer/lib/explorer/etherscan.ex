@@ -648,8 +648,8 @@ defmodule Explorer.Etherscan do
           token_decimals: tt.token_decimals,
           token_type: tt.token_type,
           token_log_index: tt.token_log_index,
-          token_amounts: tt.amounts,
-          token_token_ids: tt.token_ids
+          token_amounts: tt.token_amounts,
+          token_token_ids: tt.token_token_ids
         }
       )
 
