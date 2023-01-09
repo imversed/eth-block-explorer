@@ -181,10 +181,10 @@ defmodule BlockScoutWeb.API.RPC.AddressView do
   end
 
   defp prepare_token_transfer(%{token_type: "ERC-1155"} = token_transfer) do
-    transfers = if is_nil(token_transfer.token_ids) do
+    transfers = if is_nil(token_transfer.token_token_ids) do
       nil
     else
-      tuples = Enum.zip(token_transfer.token_ids, token_transfer.amounts)
+      tuples = Enum.zip(token_transfer.token_token_ids, token_transfer.token_amounts)
       objects = for {name, value} <- tuples, do: %{name => value}
       objects
     end
