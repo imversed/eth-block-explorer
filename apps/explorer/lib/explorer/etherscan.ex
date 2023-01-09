@@ -608,7 +608,9 @@ defmodule Explorer.Etherscan do
             token_symbol: tkn.symbol,
             token_decimals: tkn.decimals,
             token_type: tkn.type,
-            token_log_index: tt.log_index
+            token_log_index: tt.log_index,
+            token_amounts: tt.amounts,
+            token_token_ids: tt.token_ids
           })
       )
 
@@ -645,7 +647,9 @@ defmodule Explorer.Etherscan do
           token_symbol: tt.token_symbol,
           token_decimals: tt.token_decimals,
           token_type: tt.token_type,
-          token_log_index: tt.token_log_index
+          token_log_index: tt.token_log_index,
+          token_amounts: tt.amounts,
+          token_token_ids: tt.token_ids
         }
       )
 

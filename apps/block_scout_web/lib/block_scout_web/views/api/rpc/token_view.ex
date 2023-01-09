@@ -52,10 +52,18 @@ defmodule BlockScoutWeb.API.RPC.TokenView do
   end
 
   defp prepare_token_transfer(token_transfer) do
+    transfers = if is_nil(token_transfer.token_ids) do
+        nil
+      else
+        tuples = Enum.zip(token_transfer.token_ids, token_transfer.amounts)
+        objects = for {name, value} <- tuples, do: %{name => value}
+        objects
+      end
     %{
       "tokenId" => token_transfer.token_id,
       "ownerAddress" => to_string(token_transfer.to_address),
-      "contractAddress" => to_string(token_transfer.token_contract_address_hash)
+      "contractAddress" => to_string(token_transfer.token_contract_address_hash),
+      "transfers" => transfers
     }
   end
 
