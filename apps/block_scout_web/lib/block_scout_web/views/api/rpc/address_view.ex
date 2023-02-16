@@ -185,7 +185,7 @@ defmodule BlockScoutWeb.API.RPC.AddressView do
       nil
     else
       tuples = Enum.zip(token_transfer.token_token_ids, token_transfer.token_amounts)
-      objects = Enum.map (fn (id, amount) => {:tokenId => id, :value => amount} end)
+      objects = Enum.map(tuples, fn {id, amount} -> %{:tokenId => id, :value => amount} end)
       objects
     end
 
