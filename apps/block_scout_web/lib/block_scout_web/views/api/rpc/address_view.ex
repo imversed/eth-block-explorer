@@ -186,7 +186,7 @@ defmodule BlockScoutWeb.API.RPC.AddressView do
     else
       tuples = Enum.zip(token_transfer.token_token_ids, token_transfer.token_amounts)
       objects = Enum.map(tuples, fn {id, amount} -> %{:tokenId => id, :value => amount} end)
-      Poison.encode!(objects)
+      objects
     end
 
     token_transfer
@@ -228,7 +228,7 @@ defmodule BlockScoutWeb.API.RPC.AddressView do
   defp prepare_token(%{:type => "ERC-721"} = token) do
     prepare_token_base(token)
     |> Map.merge(%{
-      "metadata" => token[:metadata],
+      "metadata" => Poison.encode!(token[:metadata]),
       "token_uri" => token[:token_uri]
       })
   end
