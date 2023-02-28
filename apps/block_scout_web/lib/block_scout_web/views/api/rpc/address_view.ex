@@ -186,7 +186,7 @@ defmodule BlockScoutWeb.API.RPC.AddressView do
     else
       tuples = Enum.zip(token_transfer.token_token_ids, token_transfer.token_amounts)
       objects = Enum.map(tuples, fn {id, amount} -> %{:tokenId => id, :value => amount} end)
-      objects
+      Poison.encode!(objects)
     end
 
     token_transfer
