@@ -9,6 +9,10 @@
 /*.ez
 /logs
 .export
+
+# mix dialyzer artifacts
+/priv/plts
+
 # Generated on crash by the VM
 erl_crash.dump
 
@@ -44,7 +48,11 @@ screenshots/
 /apps/block_scout_web/priv/cert
 
 /docker-compose/postgres-data
+/docker-compose/redis-data
 /docker-compose/tmp
+/docker-compose/logs
 
 .idea/
 *.iml
+
+.vscode
