@@ -228,7 +228,7 @@ defmodule BlockScoutWeb.API.RPC.AddressView do
   defp prepare_token(%{:type => "ERC-721"} = token) do
     prepare_token_base(token)
     |> Map.merge(%{
-      "metadata" => Poison.encode!(token[:metadata]),
+      "metadata" => (token[:metadata] |> Poison.encode!()),
       "token_uri" => token[:token_uri]
       })
   end
