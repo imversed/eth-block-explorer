@@ -234,12 +234,14 @@ defmodule BlockScoutWeb.API.RPC.AddressView do
       })
   end
 
-  defp prepare_token_x(%{:contractType => "ERC-721"} = token) do
-    Map.put(token, "metadata", Jason.encode!(token[:metadata]))
-  end
-  
   defp prepare_token_x(token) do
-    token
+    if token.contractType == "ERC-721" do
+      # replace value of metadata key by its encoded version
+      token
+      |> Map.put("metadata", Jason.encode!(token.metadata))
+    else
+      token
+    end
   end
 
   defp prepare_token(token) do
