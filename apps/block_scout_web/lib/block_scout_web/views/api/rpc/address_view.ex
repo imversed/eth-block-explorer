@@ -53,7 +53,7 @@ defmodule BlockScoutWeb.API.RPC.AddressView do
   end
 
   def render("token_list_x.json", %{token_list: token_list}) do
-    data = Enum.map(token_list, &prepare_token/1)
+    data = Enum.map(token_list, &prepare_token_x/1)
     RPCView.render("show.json", data: data)
   end
 
@@ -233,7 +233,11 @@ defmodule BlockScoutWeb.API.RPC.AddressView do
       "token_uri" => token[:token_uri]
       })
   end
-  
+
+  defp prepare_token_x(%{:type => "ERC-721"} = token) do
+    Map.put(token, "metadata", Jason.encode!(token[:metadata]))
+  end
+
   defp prepare_token(token) do
     prepare_token_base(token)
   end
