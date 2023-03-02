@@ -85,7 +85,7 @@ defmodule BlockScoutWeb.API.RPC.TokenView do
       :name
     ])
 
-    instance_fields = %{ "metadata" => Jason.decode!(tt.instance.metadata) }
+    instance_fields = %{ "metadata" => Jason.encode!(tt.instance.metadata) }
 
     tt_fields |> Map.merge(token_fields) |> Map.merge(instance_fields)
   end
