@@ -237,6 +237,10 @@ defmodule BlockScoutWeb.API.RPC.AddressView do
   defp prepare_token_x(%{:type => "ERC-721"} = token) do
     Map.put(token, "metadata", Jason.encode!(token[:metadata]))
   end
+  
+  defp prepare_token_x(%{:type => "ERC-721"} = token) do
+    token
+  end
 
   defp prepare_token(token) do
     prepare_token_base(token)
