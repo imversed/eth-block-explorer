@@ -235,13 +235,9 @@ defmodule BlockScoutWeb.API.RPC.AddressView do
   end
 
   defp prepare_token_x(token) do
-    if is_nil(token.metadata) do
       token
-    else
-      # replace value of metadata key by its encoded version
-      token
-      |> Map.put("metadata", Jason.encode!(token.metadata))
-    end
+      |> Map.merge(% { "metadata" => Jason.encode!(token[:metadata]) })
+    
   end
 
   defp prepare_token(token) do
