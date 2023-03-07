@@ -236,10 +236,10 @@ defmodule BlockScoutWeb.API.RPC.AddressView do
 
   defp prepare_token_x(token) do
       token
-      |> Map.merge(%{ 
-        "metadata" => Jason.encode!(token[:metadata]) 
+      |> Map.merge(%{
+        :metadata => Jason.encode!(token[:metadata])
       })
-    
+
   end
 
   defp prepare_token(token) do
